@@ -20,6 +20,7 @@ def main():
     has_started = False
 
     # Wait for start of transmission
+
     while not has_started:
         start_time = time.time()
         # checking if we received the StartOfTransmission code (EF)
@@ -41,7 +42,7 @@ def main():
             end_time = time.time()
             timer = end_time - start_time
             print(timer)
-            time.sleep(5.1 + offset  - timer)  # sleeping to keep being synchronized with the sender
+            time.sleep(5.2 + offset  - timer)  # sleeping to keep being synchronized with the sender
 
     while not end_of_message:
         # Defaulting values
@@ -90,7 +91,7 @@ def main():
                 end_time = time.time()
                 timer = end_time - start_time
                 print(timer)
-                time.sleep(3.5 - timer)  # maintain the synchronization
+                time.sleep(3.68 - timer)  # maintain the synchronization
                 break
 
         # receiving the second hex of the ASCII character
@@ -117,7 +118,7 @@ def main():
                 second_byte = i
                 end_time = time.time()
                 timer = end_time - start_time
-                time.sleep(3.5 - timer)  # maintain the synchronization
+                time.sleep(3.68 - timer)  # maintain the synchronization
                 print(timer)
                 break
 

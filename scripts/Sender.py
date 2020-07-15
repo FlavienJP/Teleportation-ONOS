@@ -8,6 +8,7 @@ def main(message):
     start_transmission = False
     # Tell peer that transmission will start
     while not start_transmission:
+        start_time = time.time()
         s=connect_onos('127.0.0.1', 6633, 0xEF)
         time.sleep(0.1)
         # sending a ECHO_REQUEST to check if the OF connection is still alive
@@ -25,9 +26,11 @@ def main(message):
                     start_transmission = True
         else:
             s.close()
+        print(time.time() - start_time)
 
     # Transmit message
     for i in range(len(message)):
+        start_time = time.time()
         print('Sending ' + message[i])
 
         # encoding the character in ASCII hex
@@ -40,16 +43,20 @@ def main(message):
         s = connect_onos('127.0.0.1', 6633, first_hex)
         time.sleep(3.6)
         s.close()
+        print(time.time() - start_time)
+        start_time = time.time()
 
         # sending second hex
         print('sending ' + str(second_hex))
         s = connect_onos('127.0.0.1', 6633, second_hex)
         time.sleep(3.6)
         s.close()
+        print(time.time() - start_time)
 
     end_transmission = False
     # Tell peer that transmission is done
     while not end_transmission:
+        start_time = time.time()
         s=connect_onos('127.0.0.1', 6633, 0xFF)
         time.sleep(0.1)
         # sending a ECHO_REQUEST to check if the OF connection is still alive
@@ -67,7 +74,7 @@ def main(message):
                     end_transmission = True
         else:
             s.close()
-
+        print(time.time() - start_time)
     print(f'message "{message}" sent')
 
 
