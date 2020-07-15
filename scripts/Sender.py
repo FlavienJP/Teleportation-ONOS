@@ -1,13 +1,30 @@
-from .common import *
+#!/usr/bin/python3
+from common import *
 import time, argparse
 
 
 def main(message):
 
-    # Tell peer Start_of_transmission
-    s=connect_onos('127.0.0.1', 6633, 0xEF)
-    time.sleep(5)
-    s.close()
+    start_transmission = False
+    # Tell peer that transmission will start
+    while not start_transmission:
+        s=connect_onos('127.0.0.1', 6633, 0xEF)
+        time.sleep(0.1)
+        # sending a ECHO_REQUEST to check if the OF connection is still alive
+        echo_req_pkt = OFPTEchoRequest(xid=100)
+        s.send(bytes(echo_req_pkt))
+        time.sleep(0.01)
+        # check if a ECHO_REPLY has been received, if not, transmission has begun
+        pkts = dissect(s.recv(4096))
+        if len(pkts) > 0:
+            for packet in pkts:
+                if packet.type == 3:
+                    print('Sending SoT')
+                    time.sleep(5)
+                    s.close()
+                    start_transmission = True
+        else:
+            s.close()
 
     # Transmit message
     for i in range(len(message)):
@@ -21,21 +38,37 @@ def main(message):
         # sending first hex
         print('sending ' + str(first_hex))
         s = connect_onos('127.0.0.1', 6633, first_hex)
-        time.sleep(2.125)
+        time.sleep(3.6)
         s.close()
 
         # sending second hex
         print('sending ' + str(second_hex))
         s = connect_onos('127.0.0.1', 6633, second_hex)
-        time.sleep(2.225)
+        time.sleep(3.6)
         s.close()
 
-        # sending EndOfTransmission
-        s = connect_onos('127.0.0.1', 6633, 0xFF)
-        time.sleep(5)
-        s.close()
+    end_transmission = False
+    # Tell peer that transmission is done
+    while not end_transmission:
+        s=connect_onos('127.0.0.1', 6633, 0xFF)
+        time.sleep(0.1)
+        # sending a ECHO_REQUEST to check if the OF connection is still alive
+        echo_req_pkt = OFPTEchoRequest(xid=100)
+        s.send(bytes(echo_req_pkt))
+        time.sleep(0.01)
+        # check if a ECHO_REPLY has been received, if not, transmission has begun
+        pkts = dissect(s.recv(4096))
+        if len(pkts) > 0:
+            for packet in pkts:
+                if packet.type == 3:
+                    print('Sending EoT')
+                    time.sleep(5)
+                    s.close()
+                    end_transmission = True
+        else:
+            s.close()
 
-        print('message sent')
+    print(f'message "{message}" sent')
 
 
 if __name__ == "__main__":
@@ -44,5 +77,4 @@ if __name__ == "__main__":
                         type=str, required=True)
     args = parser.parse_args()
 
-    main(args.message)
-
+    while True : main(args.message)

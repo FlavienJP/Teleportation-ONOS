@@ -65,6 +65,5 @@ def connect_onos (ip_controller, port_controller, bytes_to_send):
     multipart_desc = OFPMPReplyDesc(xid=[pkt.xid for pkt in pkts if pkt.type == 18][0],mfr_desc='Bad Guy')
     s.send(bytes(multipart_desc))
     time.sleep(0.025)
-    pkts = dissect(s.recv(4096))
 
     return s
