@@ -18,13 +18,17 @@ def main():
     end_of_message = False
     # trigger the beguinning of transmission
     has_started = False
+    # controller ip
+    controller_ip = 'onos'
+    # openflow port
+    openflow_port = 6633
 
     # Wait for start of transmission
 
     while not has_started:
         start_time = time.time()
         # checking if we received the StartOfTransmission code (EF)
-        s = connect_onos('127.0.0.1', 6633, 0xEF)
+        s = connect_onos(controller_ip, openflow_port, 0xEF)
         time.sleep(0.025)
         # sending a ECHO_REQUEST to check if the OF connection is still alive
         echo_req_pkt = OFPTEchoRequest(xid=100)
@@ -48,7 +52,7 @@ def main():
         # Defaulting values
         first_byte, second_byte = '',''
         # checking if we received the EndOfTransmission code (FF)
-        s = connect_onos('127.0.0.1', 6633, 0xFF)
+        s = connect_onos(controller_ip, openflow_port, 0xFF)
         time.sleep(0.025)
         # sending a ECHO_REQUEST to check if the OF connection is still alive
         echo_req_pkt = OFPTEchoRequest(xid=100)
@@ -69,7 +73,7 @@ def main():
         # receiving the first hex of the ASCII character
         start_time = time.time()
         for i in range(1, 16):
-            s = connect_onos('127.0.0.1', 6633, i)
+            s = connect_onos(controller_ip, openflow_port, i)
             time.sleep(0.025)
 
             # ECHO_REQUEST to check OF connection
@@ -91,13 +95,13 @@ def main():
                 end_time = time.time()
                 timer = end_time - start_time
                 print(timer)
-                time.sleep(3.68 - timer)  # maintain the synchronization
+                time.sleep(3.78 - timer)  # maintain the synchronization
                 break
 
         # receiving the second hex of the ASCII character
         start_time = time.time()
         for i in range(1, 16):
-            s = connect_onos('127.0.0.1', 6633, i)
+            s = connect_onos(controller_ip, openflow_port, i)
             time.sleep(0.025)
 
             # ECHO_REQUEST to check OF connection
@@ -118,7 +122,7 @@ def main():
                 second_byte = i
                 end_time = time.time()
                 timer = end_time - start_time
-                time.sleep(3.68 - timer)  # maintain the synchronization
+                time.sleep(3.78 - timer)  # maintain the synchronization
                 print(timer)
                 break
 

@@ -3,13 +3,16 @@ from common import *
 import time, argparse
 
 
+controller_ip = 'onos'
+openflow_port = 6633
+
 def main(message):
 
     start_transmission = False
     # Tell peer that transmission will start
     while not start_transmission:
         start_time = time.time()
-        s=connect_onos('127.0.0.1', 6633, 0xEF)
+        s=connect_onos(controller_ip, openflow_port, 0xEF)
         time.sleep(0.1)
         # sending a ECHO_REQUEST to check if the OF connection is still alive
         echo_req_pkt = OFPTEchoRequest(xid=100)
@@ -26,7 +29,7 @@ def main(message):
                     start_transmission = True
         else:
             s.close()
-        print(time.time() - start_time)
+        print('time used: ', time.time() - start_time)
 
     # Transmit message
     for i in range(len(message)):
@@ -40,24 +43,24 @@ def main(message):
 
         # sending first hex
         print('sending ' + str(first_hex))
-        s = connect_onos('127.0.0.1', 6633, first_hex)
-        time.sleep(3.6)
+        s = connect_onos(controller_ip, openflow_port, first_hex)
+        time.sleep(3.72)
         s.close()
-        print(time.time() - start_time)
+        print('time used: ', time.time() - start_time)
         start_time = time.time()
 
         # sending second hex
         print('sending ' + str(second_hex))
-        s = connect_onos('127.0.0.1', 6633, second_hex)
-        time.sleep(3.6)
+        s = connect_onos(controller_ip, openflow_port, second_hex)
+        time.sleep(3.72)
         s.close()
-        print(time.time() - start_time)
+        print('time used: ', time.time() - start_time)
 
     end_transmission = False
     # Tell peer that transmission is done
     while not end_transmission:
         start_time = time.time()
-        s=connect_onos('127.0.0.1', 6633, 0xFF)
+        s=connect_onos(controller_ip, openflow_port, 0xFF)
         time.sleep(0.1)
         # sending a ECHO_REQUEST to check if the OF connection is still alive
         echo_req_pkt = OFPTEchoRequest(xid=100)
@@ -69,12 +72,13 @@ def main(message):
             for packet in pkts:
                 if packet.type == 3:
                     print('Sending EoT')
-                    time.sleep(5)
+                    time.sleep(10)
                     s.close()
                     end_transmission = True
+                    break
         else:
             s.close()
-        print(time.time() - start_time)
+        print('time used: ', time.time() - start_time)
     print(f'message "{message}" sent')
 
 
