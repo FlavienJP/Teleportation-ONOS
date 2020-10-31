@@ -67,3 +67,35 @@ def connect_onos (ip_controller, port_controller, bytes_to_send):
     time.sleep(0.025)
 
     return s
+
+def secure_connect(ip_controller, port_controller, bytes_to_send):
+    while True:
+        s=connect_onos(ip_controller, port_controller, bytes_to_send)
+        time.sleep(0.1)
+        # sending a ECHO_REQUEST to check if the OF connection is still alive
+        echo_req_pkt = OFPTEchoRequest(xid=100)
+        s.send(bytes(echo_req_pkt))
+        time.sleep(0.01) # Wait for the answer from controller
+        pkts = dissect(s.recv(4096))
+        if len(pkts) > 0:
+            for packet in pkts:
+                if packet.type == 3:
+                    return s, True
+        s.close()
+        time.sleep(0.125)
+
+def check_value(ip_controller, port_controller, bytes_to_send):
+    s=connect_onos(ip_controller, port_controller, bytes_to_send)
+    time.sleep(0.1)
+    # sending a ECHO_REQUEST to check if the OF connection is still alive
+    echo_req_pkt = OFPTEchoRequest(xid=100)
+    s.send(bytes(echo_req_pkt))
+    time.sleep(0.01)  # Wait for the answer from controller
+    pkts = dissect(s.recv(4096))
+    if len(pkts) > 0:
+        for packet in pkts:
+            if packet.type == 3:
+                s.close()
+                return False
+    s.close()
+    return True
