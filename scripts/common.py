@@ -4,8 +4,8 @@ import socket, time
 
 def dissect(raw):
     """
-    Dissect all messages received from socket
-    Sometimes two messages are sent during one exchange
+    Dissect all messages received from socket.
+    Sometimes two messages or more are sent during one exchange.
     """
     pkts = []
     while raw != b'':
@@ -15,9 +15,9 @@ def dissect(raw):
     return pkts
 
 
-def connect_onos (ip_controller, port_controller, bytes_to_send):
+def connect_onos(ip_controller, port_controller, bytes_to_send):
     """
-    Simulate openflow connection establisment with bytes_to_send as DPID
+    Simulate openflow connection establishment with bytes_to_send as DPID (DataPath Identifier)
     """
     # Initalize connection to the ONOS controller
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -61,21 +61,28 @@ def connect_onos (ip_controller, port_controller, bytes_to_send):
     time.sleep(0.025)
     pkts = dissect(s.recv(4096))
 
-    # Send MULTIPART_DESC packet and get the return
-    multipart_desc = OFPMPReplyDesc(xid=[pkt.xid for pkt in pkts if pkt.type == 18][0],mfr_desc='Bad Guy')
+    # Send MULTIPART_DESC packet and get the return (Here we can clearly identify that switch is malicious since we
+    # send 'Bad Guy' as manufacturer name.
+    multipart_desc = OFPMPReplyDesc(xid=[pkt.xid for pkt in pkts if pkt.type == 18][0], mfr_desc='Bad Guy')
     s.send(bytes(multipart_desc))
     time.sleep(0.025)
 
     return s
 
+
 def secure_connect(ip_controller, port_controller, bytes_to_send):
+    """
+    Force connection to the controller, if the opposite node is testing value at the same time we can be rejected by
+    the controller, so we are using a loop to ensure that we are well connected. Return the socket to let the main
+    script close the connexion when needed.
+    """
     while True:
         s=connect_onos(ip_controller, port_controller, bytes_to_send)
         time.sleep(0.1)
         # sending a ECHO_REQUEST to check if the OF connection is still alive
         echo_req_pkt = OFPTEchoRequest(xid=100)
         s.send(bytes(echo_req_pkt))
-        time.sleep(0.01) # Wait for the answer from controller
+        time.sleep(0.01) # Wait for packets from controller
         pkts = dissect(s.recv(4096))
         if len(pkts) > 0:
             for packet in pkts:
@@ -84,13 +91,17 @@ def secure_connect(ip_controller, port_controller, bytes_to_send):
         s.close()
         time.sleep(0.125)
 
-def check_value(ip_controller, port_controller, bytes_to_send):
+def test_value(ip_controller, port_controller, bytes_to_send):
+    """
+    Test the DPID value to see if the connexion is already established by the opposite node, return True if the
+    connexion is not established.
+    """
     s=connect_onos(ip_controller, port_controller, bytes_to_send)
     time.sleep(0.1)
     # sending a ECHO_REQUEST to check if the OF connection is still alive
     echo_req_pkt = OFPTEchoRequest(xid=100)
     s.send(bytes(echo_req_pkt))
-    time.sleep(0.01)  # Wait for the answer from controller
+    time.sleep(0.01)  # Wait for packets from controller
     pkts = dissect(s.recv(4096))
     if len(pkts) > 0:
         for packet in pkts:
